@@ -109,6 +109,10 @@ a:hover { color: var(--brass-dark); }
     border-bottom-color: var(--brass-light);
 }
 .app-navbar .navbar-text { font-size: 0.9rem; }
+.app-navbar .navbar-text a:hover{
+    color: var(--brass-light);
+    text-decoration: underline;
+}
 
 .role-badge {
     display: inline-block;
