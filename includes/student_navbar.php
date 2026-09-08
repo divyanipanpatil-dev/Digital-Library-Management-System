@@ -16,8 +16,10 @@
       </ul>
       <span class="navbar-text text-light me-3">
         <span class="role-badge role-badge--student me-2">Student</span>
+        <a href="profile.php">
         <i class="bi bi-person-circle"></i> <?php echo clean($_SESSION['student_name'] ?? 'Student'); ?>
       </span>
+</a>
       <a href="<?php echo $root; ?>logout.php" class="btn btn-outline-light btn-sm">Logout</a>
     </div>
   </div>
