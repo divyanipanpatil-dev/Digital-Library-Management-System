@@ -9,13 +9,18 @@ $student_id = $_SESSION['student_id'];
 $success = "";
 $error = "";
 
-// Update phone / address
+// Update phone / address / branch / roll no / admission year / alternate number
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form'] ?? '') === 'update_profile') {
     $phone = trim($_POST['phone']);
+    $alternate_phone = trim($_POST['alternate_phone']);
     $address = trim($_POST['address']);
+    $branch = trim($_POST['branch']);
+    $roll_no = trim($_POST['roll_no']);
+    $ays = $_POST['admission_year_start'] !== '' ? (int)$_POST['admission_year_start'] : null;
+    $aye = $_POST['admission_year_end'] !== '' ? (int)$_POST['admission_year_end'] : null;
 
-    $stmt = $conn->prepare("UPDATE students SET phone=?, address=? WHERE student_id=?");
-    $stmt->execute([$phone, $address, $student_id]);
+    $stmt = $conn->prepare("UPDATE students SET phone=?, alternate_phone=?, address=?, branch=?, roll_no=?, admission_year_start=?, admission_year_end=? WHERE student_id=?");
+    $stmt->execute([$phone, $alternate_phone, $address, $branch, $roll_no, $ays, $aye, $student_id]);
     $success = "Your profile has been updated.";
 }
 
@@ -58,7 +63,7 @@ include __DIR__ . '/../includes/student_navbar.php';
   <?php if ($error): ?><div class="alert alert-danger"><?php echo clean($error); ?></div><?php endif; ?>
 
   <div class="row g-4">
-    <div class="col-lg-6">
+    <div class="col-lg-7">
       <div class="card h-100">
         <div class="card-body">
           <h5 class="card-title mb-3">Profile Details</h5>
@@ -72,25 +77,58 @@ include __DIR__ . '/../includes/student_navbar.php';
               <span class="badge badge-unavailable">Inactive</span>
             <?php endif; ?>
           </p>
-          <p class="mb-3"><strong>Member Since:</strong> <?php echo clean($profile['registration_date']); ?></p>
+          <p class="mb-3">
+            <strong>Membership:</strong>
+            <?php echo $profile['membership_start_date'] ? clean($profile['membership_start_date']) : 'Not set'; ?>
+            &rarr;
+            <?php echo $profile['membership_end_date'] ? clean($profile['membership_end_date']) : 'Not set'; ?>
+            <?php if ($profile['membership_end_date'] && strtotime($profile['membership_end_date']) < strtotime(date('Y-m-d'))): ?>
+              <span class="badge badge-overdue ms-1">Expired</span>
+            <?php elseif ($profile['membership_end_date']): ?>
+              <span class="badge badge-available ms-1">Active</span>
+            <?php endif; ?>
+            <br><small class="text-muted">Set by the librarian &mdash; contact them to renew or correct this.</small>
+          </p>
 
           <form method="POST">
             <input type="hidden" name="form" value="update_profile">
-            <div class="mb-3">
-              <label class="form-label">Phone</label>
-              <input type="text" name="phone" class="form-control" value="<?php echo clean($profile['phone']); ?>">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Phone</label>
+                <input type="text" name="phone" class="form-control" value="<?php echo clean($profile['phone']); ?>">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Alternate Number</label>
+                <input type="text" name="alternate_phone" class="form-control" value="<?php echo clean($profile['alternate_phone']); ?>">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Branch</label>
+                <input type="text" name="branch" class="form-control" placeholder="e.g. BCA" value="<?php echo clean($profile['branch']); ?>">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Roll No</label>
+                <input type="text" name="roll_no" class="form-control" value="<?php echo clean($profile['roll_no']); ?>">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Admission Year (Start)</label>
+                <input type="number" name="admission_year_start" class="form-control" min="2000" max="2100" value="<?php echo clean($profile['admission_year_start']); ?>">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Admission Year (End)</label>
+                <input type="number" name="admission_year_end" class="form-control" min="2000" max="2100" value="<?php echo clean($profile['admission_year_end']); ?>">
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">Address</label>
+                <textarea name="address" class="form-control" rows="2"><?php echo clean($profile['address']); ?></textarea>
+              </div>
             </div>
-            <div class="mb-3">
-              <label class="form-label">Address</label>
-              <textarea name="address" class="form-control" rows="2"><?php echo clean($profile['address']); ?></textarea>
-            </div>
-            <button type="submit" class="btn btn-accent">Save Changes</button>
+            <button type="submit" class="btn btn-accent mt-3">Save Changes</button>
           </form>
         </div>
       </div>
     </div>
 
-    <div class="col-lg-6">
+    <div class="col-lg-5">
       <div class="card h-100">
         <div class="card-body">
           <h5 class="card-title mb-3">Change Password</h5>
