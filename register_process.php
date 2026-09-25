@@ -9,6 +9,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $full_name = trim($_POST['full_name'] ?? '');
 $email = trim($_POST['email'] ?? '');
 $phone = trim($_POST['phone'] ?? '');
+$alternate_phone = trim($_POST['alternate_phone'] ?? '');
+$branch = trim($_POST['branch'] ?? '');
+$roll_no = trim($_POST['roll_no'] ?? '');
+$admission_year_start = $_POST['admission_year_start'] !== '' ? (int)$_POST['admission_year_start'] : null;
+$admission_year_end = $_POST['admission_year_end'] !== '' ? (int)$_POST['admission_year_end'] : null;
 $address = trim($_POST['address'] ?? '');
 $password = $_POST['password'] ?? '';
 $confirm = $_POST['confirm_password'] ?? '';
@@ -35,8 +40,8 @@ if ($stmt->get_result()->num_rows > 0) {
 }
 
 $hashed = password_hash($password, PASSWORD_DEFAULT);
-$stmt = $conn->prepare("INSERT INTO students (full_name, email, password, phone, address) VALUES (?, ?, ?, ?, ?)");
-$stmt->execute([$full_name, $email, $hashed, $phone, $address]);
+$stmt = $conn->prepare("INSERT INTO students (full_name, email, password, phone, alternate_phone, branch, roll_no, admission_year_start, admission_year_end, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt->execute([$full_name, $email, $hashed, $phone, $alternate_phone, $branch, $roll_no, $admission_year_start, $admission_year_end, $address]);
 
 header("Location: login.php?msg=Registration successful! Please log in.");
 exit();
