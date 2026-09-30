@@ -16,7 +16,8 @@ $stmt = $conn->prepare("
     WHERE t.student_id = ?
     ORDER BY t.transaction_id DESC
 ");
-$stmt->execute([$student_id]);
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
 $all_txns = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
 $current = array_filter($all_txns, fn($t) => in_array($t['status'], ['issued', 'return_requested']));

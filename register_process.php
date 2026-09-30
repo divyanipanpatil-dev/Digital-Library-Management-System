@@ -33,15 +33,41 @@ if (strlen($password) < 6) {
 
 // Check duplicate email
 $stmt = $conn->prepare("SELECT student_id FROM students WHERE email = ?");
-$stmt->execute([$email]);
+if (!$stmt) {
+    die("Email check failed: " . $conn->error);
+}
+$stmt->bind_param("s", $email);
+$stmt->execute();
+
 if ($stmt->get_result()->num_rows > 0) {
     header("Location: register.php?error=An account with this email already exists.");
     exit();
 }
 
 $hashed = password_hash($password, PASSWORD_DEFAULT);
+
 $stmt = $conn->prepare("INSERT INTO students (full_name, email, password, phone, alternate_phone, branch, roll_no, admission_year_start, admission_year_end, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-$stmt->execute([$full_name, $email, $hashed, $phone, $alternate_phone, $branch, $roll_no, $admission_year_start, $admission_year_end, $address]);
+
+if (!$stmt) {
+    die("Database INSERT prepare failed: " . $conn->error);
+}
+
+// Bind all values as strings ('s') to avoid type mismatches
+$stmt->bind_param(
+    "ssssssssss",
+    $full_name,
+    $email,
+    $hashed,
+    $phone,
+    $alternate_phone,
+    $branch,
+    $roll_no,
+    $admission_year_start,
+    $admission_year_end,
+    $address
+);
+
+$stmt->execute();
 
 header("Location: login.php?msg=Registration successful! Please log in.");
 exit();

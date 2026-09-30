@@ -12,6 +12,7 @@ $cat_filter = (int)($_GET['category'] ?? 0);
 
 $sql = "SELECT b.*, c.category_name FROM books b LEFT JOIN categories c ON b.category_id=c.category_id WHERE 1=1";
 $params = [];
+
 if ($search !== '') {
     $sql .= " AND (b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ?)";
     $like = "%$search%";
@@ -21,9 +22,16 @@ if ($cat_filter > 0) {
     $sql .= " AND b.category_id = ?";
     $params[] = $cat_filter;
 }
+
 $sql .= " ORDER BY b.title ASC";
 $stmt = $conn->prepare($sql);
-$stmt->execute($params);
+
+if (!empty($params)) {
+    $types = str_repeat('s', count($params));
+    $stmt->bind_param($types, ...$params);
+}
+
+$stmt->execute();
 $books = $stmt->get_result();
 
 $categories = $conn->query("SELECT * FROM categories ORDER BY category_name");

@@ -9,17 +9,24 @@ include __DIR__ . '/../includes/student_navbar.php';
 
 $student_id = $_SESSION['student_id'];
 
+// 1. Fetch count of currently issued books
 $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM transactions WHERE student_id=? AND status IN ('issued','return_requested')");
-$stmt->execute([$student_id]);
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
 $issued_count = $stmt->get_result()->fetch_assoc()['c'];
 
+// 2. Fetch count of overdue books
 $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM transactions WHERE student_id=? AND status IN ('issued','return_requested') AND due_date < CURDATE()");
-$stmt->execute([$student_id]);
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
 $overdue_count = $stmt->get_result()->fetch_assoc()['c'];
 
+// 3. Fetch overdue records to calculate fine
 $stmt = $conn->prepare("SELECT due_date FROM transactions WHERE student_id=? AND status IN ('issued','return_requested') AND due_date < CURDATE()");
-$stmt->execute([$student_id]);
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
 $overdue_rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
 $total_fine = 0;
 foreach ($overdue_rows as $r) {
     $total_fine += calculate_fine($r['due_date']);
