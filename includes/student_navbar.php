@@ -1,3 +1,10 @@
+
+<?php
+$__unread = 0;
+if (isset($_SESSION['student_id'])) {
+    $__unread = unread_notification_count($conn, $_SESSION['student_id']);
+}
+?>
 <nav class="navbar navbar-expand-lg navbar-dark app-navbar">
   <div class="container-fluid">
     <a class="navbar-brand" href="<?php echo $root; ?>student/dashboard.php">
@@ -14,6 +21,14 @@
         <li class="nav-item"><a class="nav-link <?php echo ($active=='return')?'active':''; ?>" href="<?php echo $root; ?>student/return_book.php">Return Book</a></li>
         <li class="nav-item"><a class="nav-link <?php echo ($active=='status')?'active':''; ?>" href="<?php echo $root; ?>student/book_status.php">Book Status</a></li>
       </ul>
+
+      <a href="<?php echo $root; ?>student/notifications.php" class="btn btn-outline-light btn-sm position-relative me-3">
+        <i class="bi bi-bell"></i>
+        <?php if ($__unread > 0): ?>
+          <span class="notif-dot"><?php echo $__unread > 9 ? '9+' : $__unread; ?></span>
+        <?php endif; ?>
+      </a>
+      
       <span class="navbar-text text-light me-3">
         <span class="role-badge role-badge--student me-2">Student</span>
         <a href="profile.php">

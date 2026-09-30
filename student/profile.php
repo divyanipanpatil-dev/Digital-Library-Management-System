@@ -20,7 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form'] ?? '') === 'update_
     $aye = $_POST['admission_year_end'] !== '' ? (int)$_POST['admission_year_end'] : null;
 
     $stmt = $conn->prepare("UPDATE students SET phone=?, alternate_phone=?, address=?, branch=?, roll_no=?, admission_year_start=?, admission_year_end=? WHERE student_id=?");
-    $stmt->execute([$phone, $alternate_phone, $address, $branch, $roll_no, $ays, $aye, $student_id]);
+    $stmt->bind_param("sssssiii", $phone, $alternate_phone, $address, $branch, $roll_no, $ays, $aye, $student_id);
+    $stmt->execute();
     $success = "Your profile has been updated.";
 }
 
@@ -31,7 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form'] ?? '') === 'change_
     $confirm  = $_POST['confirm_password'];
 
     $stmt = $conn->prepare("SELECT password FROM students WHERE student_id = ?");
-    $stmt->execute([$student_id]);
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
 
     if (!$row || !password_verify($current, $row['password'])) {
@@ -43,14 +45,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form'] ?? '') === 'change_
     } else {
         $hashed = password_hash($new, PASSWORD_DEFAULT);
         $stmt = $conn->prepare("UPDATE students SET password=? WHERE student_id=?");
-        $stmt->execute([$hashed, $student_id]);
+        $stmt->bind_param("si", $hashed, $student_id);
+        $stmt->execute();
         $success = "Your password has been changed.";
     }
 }
 
 // Always re-fetch the latest data after any update
 $stmt = $conn->prepare("SELECT * FROM students WHERE student_id = ?");
-$stmt->execute([$student_id]);
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
 $profile = $stmt->get_result()->fetch_assoc();
 
 include __DIR__ . '/../includes/header.php';

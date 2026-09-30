@@ -16,18 +16,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Validate book availability
     $stmt = $conn->prepare("SELECT available_copies FROM books WHERE book_id = ?");
-    $stmt->execute([$book_id]);
+    $stmt->bind_param("i", $book_id);
+    $stmt->execute();
     $book = $stmt->get_result()->fetch_assoc();
 
     // Validate student's current active loan count (a pending return request still counts —
     // the book is physically with the student until the librarian confirms receipt)
     $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM transactions WHERE student_id = ? AND status IN ('issued','return_requested')");
-    $stmt->execute([$student_id]);
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
     $active_count = $stmt->get_result()->fetch_assoc()['c'];
 
     // Check duplicate active issue of same book to same student
     $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM transactions WHERE student_id = ? AND book_id = ? AND status IN ('issued','return_requested')");
-    $stmt->execute([$student_id, $book_id]);
+    $stmt->bind_param("ii", $student_id, $book_id);
+    $stmt->execute();
     $dup = $stmt->get_result()->fetch_assoc()['c'];
 
     if (!$book || $book['available_copies'] < 1) {
@@ -40,10 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $due_date = date('Y-m-d', strtotime($issue_date . ' + ' . LOAN_PERIOD_DAYS . ' days'));
 
         $stmt = $conn->prepare("INSERT INTO transactions (book_id, student_id, issue_date, due_date, status) VALUES (?, ?, ?, ?, 'issued')");
-        $stmt->execute([$book_id, $student_id, $issue_date, $due_date]);
+        $stmt->bind_param("iiss", $book_id, $student_id, $issue_date, $due_date);
+        $stmt->execute();
 
         $stmt = $conn->prepare("UPDATE books SET available_copies = available_copies - 1 WHERE book_id = ?");
-        $stmt->execute([$book_id]);
+        $stmt->bind_param("i", $book_id);
+        $stmt->execute();
 
         $success = "Book issued successfully. Due date: " . $due_date;
     }

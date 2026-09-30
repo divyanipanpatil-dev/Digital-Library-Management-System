@@ -8,18 +8,18 @@ $student_id = $_SESSION['student_id'];
 $success = "";
 $error = "";
 
-// Student submits a return request; the librarian confirms actual receipt
-// and the fine (if any) is calculated at that point.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transaction_id'])) {
     $transaction_id = (int)$_POST['transaction_id'];
 
     $stmt = $conn->prepare("SELECT * FROM transactions WHERE transaction_id = ? AND student_id = ? AND status = 'issued'");
-    $stmt->execute([$transaction_id, $student_id]);
+    $stmt->bind_param("ii", $transaction_id, $student_id);
+    $stmt->execute();
     $txn = $stmt->get_result()->fetch_assoc();
 
     if ($txn) {
         $stmt = $conn->prepare("UPDATE transactions SET status = 'return_requested' WHERE transaction_id = ?");
-        $stmt->execute([$transaction_id]);
+        $stmt->bind_param("i", $transaction_id);
+        $stmt->execute();
         $success = "Return request submitted. Please hand the book to the librarian to complete the return.";
     } else {
         $error = "That book could not be found in your active loans.";
@@ -36,7 +36,8 @@ $stmt = $conn->prepare("
     WHERE t.student_id = ? AND t.status IN ('issued', 'return_requested')
     ORDER BY t.due_date ASC
 ");
-$stmt->execute([$student_id]);
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
 $books = $stmt->get_result();
 ?>
 <div class="container my-4">

@@ -57,4 +57,18 @@ function calculate_fine($due_date, $return_date = null) {
     }
     return 0;
 }
+
+// ---- Notifications ----
+function notify($conn, $student_id, $message, $type = 'general') {
+    $stmt = $conn->prepare("INSERT INTO notifications (student_id, message, type) VALUES (?, ?, ?)");
+    $stmt->bind_param("iss", $student_id, $message, $type);
+    $stmt->execute();
+}
+
+function unread_notification_count($conn, $student_id) {
+    $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM notifications WHERE student_id = ? AND is_read = 'no'");
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc()['c'];
+}
 ?>
