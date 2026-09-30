@@ -17,13 +17,12 @@ if ($identifier === '' || $password === '') {
 
 if ($role === 'admin') {
     $stmt = $conn->prepare("SELECT admin_id, username, password, full_name FROM admin WHERE username = ?");
-    $stmt->execute([$identifier]);
+    $stmt->bind_param("s", $identifier);
+    $stmt->execute();
     $result = $stmt->get_result();
     $admin = $result->fetch_assoc();
 
     if ($admin && password_verify($password, $admin['password'])) {
-        // Clear any existing session identity (e.g. a student session left open
-        // in this same browser) before establishing the admin session.
         session_unset();
         session_regenerate_id(true);
         $_SESSION['admin_id'] = $admin['admin_id'];
@@ -37,7 +36,8 @@ if ($role === 'admin') {
 
 } elseif ($role === 'student') {
     $stmt = $conn->prepare("SELECT student_id, email, password, full_name, status FROM students WHERE email = ?");
-    $stmt->execute([$identifier]);
+    $stmt->bind_param("s", $identifier);
+    $stmt->execute();
     $result = $stmt->get_result();
     $student = $result->fetch_assoc();
 
@@ -46,8 +46,6 @@ if ($role === 'admin') {
             header("Location: login.php?error=Your account is inactive. Contact the librarian.");
             exit();
         }
-        // Clear any existing session identity (e.g. a librarian session left open
-        // in this same browser) before establishing the student session.
         session_unset();
         session_regenerate_id(true);
         $_SESSION['student_id'] = $student['student_id'];
