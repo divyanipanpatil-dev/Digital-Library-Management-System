@@ -10,7 +10,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $name = trim($_POST['category_name']);
         if ($name !== '') {
             $stmt = $conn->prepare("INSERT INTO categories (category_name) VALUES (?)");
-            $stmt->execute([$name]);
+            $stmt->bind_param("s", $name);
+            $stmt->execute();
         }
     }
     header("Location: manage_categories.php");
@@ -20,7 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 if (isset($_GET['delete'])) {
     $id = (int)$_GET['delete'];
     $stmt = $conn->prepare("DELETE FROM categories WHERE category_id = ?");
-    $stmt->execute([$id]);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
     header("Location: manage_categories.php");
     exit();
 }
@@ -65,7 +67,7 @@ $categories = $conn->query("
             <td>
               <a href="manage_categories.php?delete=<?php echo $cat['category_id']; ?>"
                  class="btn btn-sm btn-outline-danger"
-                 data-confirm="Delete this category? Books in it will become uncategorized.">
+                 onclick="return confirm('Delete this category? Books in it will become uncategorized.');">
                 <i class="bi bi-trash"></i>
               </a>
             </td>

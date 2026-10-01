@@ -71,4 +71,57 @@ function unread_notification_count($conn, $student_id) {
     $stmt->execute();
     return $stmt->get_result()->fetch_assoc()['c'];
 }
+
+
+// Helper function to calculate fine amount
+if (!function_exists('calculate_fine')) {
+    function calculate_fine($due_date) {
+        $today = new DateTime();
+        $due = new DateTime($due_date);
+        if ($today > $due) {
+            $days = $today->diff($due)->days;
+            $rate_per_day = 5; // Set your daily fine amount here
+            return $days * $rate_per_day;
+        }
+        return 0;
+    }
+}
+
+// Function to generate automated due notifications
+if (!function_exists('generate_due_notifications')) {
+    function generate_due_notifications($conn, $student_id) {
+        $today = date('Y-m-d');
+        
+        $stmt = $conn->prepare("SELECT transaction_id, due_date FROM transactions WHERE student_id = ? AND status IN ('issued', 'return_requested')");
+        $stmt->bind_param("i", $student_id);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        while ($row = $res->fetch_assoc()) {
+            $due_date = $row['due_date'];
+            $type = '';
+            $msg = '';
+
+            if ($due_date < $today) {
+                $type = 'overdue';
+                $msg = "Your book loan is overdue. Please return it as soon as possible.";
+            } elseif ($due_date === $today) {
+                $type = 'due_soon';
+                $msg = "Your book loan is due today.";
+            }
+
+            if ($type !== '') {
+                // Check if notification already sent today for this type
+                $check = $conn->prepare("SELECT notification_id FROM notifications WHERE student_id = ? AND type = ? AND DATE(created_at) = ?");
+                $check->bind_param("iss", $student_id, $type, $today);
+                $check->execute();
+                if ($check->get_result()->num_rows === 0) {
+                    $ins = $conn->prepare("INSERT INTO notifications (student_id, message, type, is_read, created_at) VALUES (?, ?, ?, 'no', NOW())");
+                    $ins->bind_param("iss", $student_id, $msg, $type);
+                    $ins->execute();
+                }
+            }
+        }
+    }
+}
 ?>

@@ -15,13 +15,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $issue_date = $_POST['issue_date'];
 
     // Validate book availability
-    $stmt = $conn->prepare("SELECT available_copies FROM books WHERE book_id = ?");
+    $stmt = $conn->prepare("SELECT title, available_copies FROM books WHERE book_id = ?");
     $stmt->bind_param("i", $book_id);
     $stmt->execute();
     $book = $stmt->get_result()->fetch_assoc();
 
-    // Validate student's current active loan count (a pending return request still counts —
-    // the book is physically with the student until the librarian confirms receipt)
+    // Validate student's current active loan count
     $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM transactions WHERE student_id = ? AND status IN ('issued','return_requested')");
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
@@ -49,6 +48,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $conn->prepare("UPDATE books SET available_copies = available_copies - 1 WHERE book_id = ?");
         $stmt->bind_param("i", $book_id);
         $stmt->execute();
+
+        // Notify the student that their book has been issued
+        if (function_exists('notify')) {
+            notify($conn, $student_id, 'Your book "' . $book['title'] . '" has been issued. Due date: ' . $due_date . '.', 'issue');
+        }
 
         $success = "Book issued successfully. Due date: " . $due_date;
     }
