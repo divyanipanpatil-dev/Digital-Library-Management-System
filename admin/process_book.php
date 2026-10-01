@@ -16,9 +16,11 @@ if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $shelf_location = trim($_POST['shelf_location']);
 
     $stmt = $conn->prepare("INSERT INTO books (title, author, isbn, category_id, publisher, edition, total_copies, available_copies, shelf_location) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$title, $author, $isbn ?: null, $category_id, $publisher, $edition, $total_copies, $total_copies, $shelf_location]);
+    // Bind parameters with proper type definition ("sssissiis")
+    $stmt->bind_param("sssissiis", $title, $author, $isbn, $category_id, $publisher, $edition, $total_copies, $total_copies, $shelf_location);
+    $stmt->execute();
 
-    header("Location: manage_books.php?msg=Book added successfully.");
+    header("Location: manage_books.php?msg=" . urlencode("Book added successfully."));
     exit();
 
 } elseif ($action === 'edit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -32,9 +34,10 @@ if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $new_total = max(1, (int)$_POST['total_copies']);
     $shelf_location = trim($_POST['shelf_location']);
 
-    // Adjust available_copies proportionally if total_copies changed
+    // Fetch original copies count
     $stmt = $conn->prepare("SELECT total_copies, available_copies FROM books WHERE book_id = ?");
-    $stmt->execute([$book_id]);
+    $stmt->bind_param("i", $book_id);
+    $stmt->execute();
     $current = $stmt->get_result()->fetch_assoc();
 
     if ($current) {
@@ -42,10 +45,11 @@ if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $new_available = max(0, (int)$current['available_copies'] + $diff);
 
         $stmt = $conn->prepare("UPDATE books SET title=?, author=?, isbn=?, category_id=?, publisher=?, edition=?, total_copies=?, available_copies=?, shelf_location=? WHERE book_id=?");
-        $stmt->execute([$title, $author, $isbn ?: null, $category_id, $publisher, $edition, $new_total, $new_available, $shelf_location, $book_id]);
+        $stmt->bind_param("sssissiisi", $title, $author, $isbn, $category_id, $publisher, $edition, $new_total, $new_available, $shelf_location, $book_id);
+        $stmt->execute();
     }
 
-    header("Location: manage_books.php?msg=Book updated successfully.");
+    header("Location: manage_books.php?msg=" . urlencode("Book updated successfully."));
     exit();
 
 } elseif ($action === 'delete') {
@@ -53,22 +57,23 @@ if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Prevent deletion if the book currently has active issues
     $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM transactions WHERE book_id = ? AND status = 'issued'");
-    $stmt->execute([$book_id]);
+    $stmt->bind_param("i", $book_id);
+    $stmt->execute();
     $active = $stmt->get_result()->fetch_assoc()['c'];
 
     if ($active > 0) {
-        header("Location: manage_books.php?error=Cannot delete: this book has copies currently issued.");
+        header("Location: manage_books.php?error=" . urlencode("Cannot delete: this book has copies currently issued."));
         exit();
     }
 
     $stmt = $conn->prepare("DELETE FROM books WHERE book_id = ?");
-    $stmt->execute([$book_id]);
+    $stmt->bind_param("i", $book_id);
+    $stmt->execute();
 
-    header("Location: manage_books.php?msg=Book deleted successfully.");
+    header("Location: manage_books.php?msg=" . urlencode("Book deleted successfully."));
     exit();
 
 } else {
     header("Location: manage_books.php");
     exit();
 }
-?>

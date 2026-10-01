@@ -11,21 +11,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transaction_id'])) {
     $fine_paid = isset($_POST['fine_paid']) ? 'yes' : 'no';
     $return_date = date('Y-m-d');
 
-    $stmt = $conn->prepare("SELECT * FROM transactions WHERE transaction_id = ? AND status IN ('issued','return_requested')");
-    $stmt->bind_param("i", $transaction_id);
-    $stmt->execute();
+    $stmt = $conn->prepare("SELECT t.*, b.title FROM transactions t JOIN books b ON t.book_id=b.book_id WHERE t.transaction_id = ? AND t.status IN ('issued','return_requested')");
+    $stmt->execute([$transaction_id]);
     $txn = $stmt->get_result()->fetch_assoc();
 
     if ($txn) {
         $fine = calculate_fine($txn['due_date'], $return_date);
 
         $stmt = $conn->prepare("UPDATE transactions SET return_date=?, fine_amount=?, fine_paid=?, status='returned' WHERE transaction_id=?");
-        $stmt->bind_param("sdsi", $return_date, $fine, $fine_paid, $transaction_id);
-        $stmt->execute();
+        $stmt->execute([$return_date, $fine, $fine_paid, $transaction_id]);
 
         $stmt = $conn->prepare("UPDATE books SET available_copies = available_copies + 1 WHERE book_id = ?");
-        $stmt->bind_param("i", $txn['book_id']);
-        $stmt->execute();
+        $stmt->execute([$txn['book_id']]);
+
+        // NEW: notify the student that their return has been confirmed
+        $notify_msg = 'Your book "' . $txn['title'] . '" has been returned successfully.';
+        if ($fine > 0) {
+            $notify_msg .= ' Fine due: Rs. ' . $fine . ($fine_paid === 'yes' ? ' (paid).' : ' (unpaid).');
+        }
+        notify($conn, $txn['student_id'], $notify_msg, 'return_confirmed');
 
         $success = "Book returned successfully." . ($fine > 0 ? " Fine due: Rs. " . $fine : "");
     }

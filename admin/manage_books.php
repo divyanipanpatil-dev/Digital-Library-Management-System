@@ -2,8 +2,10 @@
 $root = "../";
 require_once __DIR__ . '/../includes/functions.php';
 require_admin_login($root);
+
 $page_title = "Manage Books";
 $active = "books";
+
 include __DIR__ . '/../includes/header.php';
 include __DIR__ . '/../includes/admin_navbar.php';
 
@@ -59,13 +61,13 @@ $books = $conn->query("
               </button>
               <a href="process_book.php?action=delete&id=<?php echo $book['book_id']; ?>"
                  class="btn btn-sm btn-outline-danger"
-                 data-confirm="Delete this book? This cannot be undone.">
+                 onclick="return confirm('Delete this book? This cannot be undone.');">
                 <i class="bi bi-trash"></i>
               </a>
             </td>
           </tr>
 
-          <!-- Edit Modal for this book -->
+          <!-- Edit Modal -->
           <div class="modal fade" id="editBookModal<?php echo $book['book_id']; ?>" tabindex="-1">
             <div class="modal-dialog">
               <div class="modal-content">
@@ -94,7 +96,7 @@ $books = $conn->query("
                       <select name="category_id" class="form-select">
                         <option value="">-- None --</option>
                         <?php foreach ($categories_list as $cat): ?>
-                          <option value="<?php echo $cat['category_id']; ?>" <?php echo ($cat['category_id']==$book['category_id'])?'selected':''; ?>>
+                          <option value="<?php echo $cat['category_id']; ?>" <?php echo ($cat['category_id'] == $book['category_id']) ? 'selected' : ''; ?>>
                             <?php echo clean($cat['category_name']); ?>
                           </option>
                         <?php endforeach; ?>
@@ -124,7 +126,6 @@ $books = $conn->query("
               </div>
             </div>
           </div>
-
           <?php endwhile; ?>
         </tbody>
       </table>

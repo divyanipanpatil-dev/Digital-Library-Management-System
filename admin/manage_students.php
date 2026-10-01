@@ -21,7 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add')
     $password = $_POST['password'];
 
     $stmt = $conn->prepare("SELECT student_id FROM students WHERE email = ?");
-    $stmt->execute([$email]);
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
     if ($stmt->get_result()->num_rows > 0) {
         header("Location: manage_students.php?error=A student with this email already exists.");
         exit();
@@ -29,7 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add')
 
     $hashed = password_hash($password, PASSWORD_DEFAULT);
     $stmt = $conn->prepare("INSERT INTO students (full_name, email, password, phone, alternate_phone, address, branch, roll_no, admission_year_start, admission_year_end, membership_start_date, membership_end_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$full_name, $email, $hashed, $phone, $alternate_phone, $address, $branch, $roll_no, $ays, $aye, $mstart, $mend]);
+    $stmt->bind_param("ssssssssiiss", $full_name, $email, $hashed, $phone, $alternate_phone, $address, $branch, $roll_no, $ays, $aye, $mstart, $mend);
+    $stmt->execute();
 
     header("Location: manage_students.php?msg=Student added successfully.");
     exit();
@@ -52,7 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit'
     $new_password = trim($_POST['password'] ?? '');
 
     $stmt = $conn->prepare("SELECT student_id FROM students WHERE email = ? AND student_id != ?");
-    $stmt->execute([$email, $student_id]);
+    $stmt->bind_param("si", $email, $student_id);
+    $stmt->execute();
     if ($stmt->get_result()->num_rows > 0) {
         header("Location: manage_students.php?error=Another student already uses that email.");
         exit();
@@ -61,10 +64,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit'
     if ($new_password !== '') {
         $hashed = password_hash($new_password, PASSWORD_DEFAULT);
         $stmt = $conn->prepare("UPDATE students SET full_name=?, email=?, phone=?, alternate_phone=?, address=?, branch=?, roll_no=?, admission_year_start=?, admission_year_end=?, membership_start_date=?, membership_end_date=?, password=? WHERE student_id=?");
-        $stmt->execute([$full_name, $email, $phone, $alternate_phone, $address, $branch, $roll_no, $ays, $aye, $mstart, $mend, $hashed, $student_id]);
+        $stmt->bind_param("ssssssssiissi", $full_name, $email, $phone, $alternate_phone, $address, $branch, $roll_no, $ays, $aye, $mstart, $mend, $hashed, $student_id);
+        $stmt->execute();
     } else {
         $stmt = $conn->prepare("UPDATE students SET full_name=?, email=?, phone=?, alternate_phone=?, address=?, branch=?, roll_no=?, admission_year_start=?, admission_year_end=?, membership_start_date=?, membership_end_date=? WHERE student_id=?");
-        $stmt->execute([$full_name, $email, $phone, $alternate_phone, $address, $branch, $roll_no, $ays, $aye, $mstart, $mend, $student_id]);
+        $stmt->bind_param("ssssssssiisi", $full_name, $email, $phone, $alternate_phone, $address, $branch, $roll_no, $ays, $aye, $mstart, $mend, $student_id);
+        $stmt->execute();
     }
 
     header("Location: manage_students.php?msg=Student updated successfully.");
@@ -74,12 +79,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit'
 if (isset($_GET['toggle'])) {
     $id = (int)$_GET['toggle'];
     $stmt = $conn->prepare("SELECT status FROM students WHERE student_id = ?");
-    $stmt->execute([$id]);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
     $s = $stmt->get_result()->fetch_assoc();
     if ($s) {
         $new_status = $s['status'] === 'active' ? 'inactive' : 'active';
         $stmt = $conn->prepare("UPDATE students SET status = ? WHERE student_id = ?");
-        $stmt->execute([$new_status, $id]);
+        $stmt->bind_param("si", $new_status, $id);
+        $stmt->execute();
     }
     header("Location: manage_students.php");
     exit();
@@ -88,7 +95,8 @@ if (isset($_GET['toggle'])) {
 if (isset($_GET['delete'])) {
     $id = (int)$_GET['delete'];
     $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM transactions WHERE student_id = ? AND status IN ('issued','return_requested')");
-    $stmt->execute([$id]);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
     $active_loans = $stmt->get_result()->fetch_assoc()['c'];
 
     if ($active_loans > 0) {
@@ -96,7 +104,8 @@ if (isset($_GET['delete'])) {
         exit();
     }
     $stmt = $conn->prepare("DELETE FROM students WHERE student_id = ?");
-    $stmt->execute([$id]);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
     header("Location: manage_students.php?msg=Student deleted.");
     exit();
 }
