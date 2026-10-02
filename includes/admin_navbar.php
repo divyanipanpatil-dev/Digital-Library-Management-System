@@ -14,6 +14,7 @@
         <li class="nav-item"><a class="nav-link <?php echo ($active=='students')?'active':''; ?>" href="<?php echo $root; ?>admin/manage_students.php">Students</a></li>
         <li class="nav-item"><a class="nav-link <?php echo ($active=='issue')?'active':''; ?>" href="<?php echo $root; ?>admin/issue_book.php">Issue Book</a></li>
         <li class="nav-item"><a class="nav-link <?php echo ($active=='return')?'active':''; ?>" href="<?php echo $root; ?>admin/return_book.php">Return Book</a></li>
+        <li class="nav-item"><a class="nav-link <?php echo ($active=='track')?'active':''; ?>" href="<?php echo $root; ?>admin/track_book.php">Track Book</a></li>
         <li class="nav-item"><a class="nav-link <?php echo ($active=='reports')?'active':''; ?>" href="<?php echo $root; ?>admin/reports.php">Reports</a></li>
       </ul>
       <span class="navbar-text text-light me-3">
