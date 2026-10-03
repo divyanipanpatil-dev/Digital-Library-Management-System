@@ -6,12 +6,7 @@
 session_start();
 require_once __DIR__ . '/../config/db_connect.php';
 
-// Never let the browser cache a rendered page from this app. Without this,
-// pressing Back (or switching tabs) after logging in as a different role can
-// display a stale copy of a page from the previous session — which looks
-// exactly like a session/identity bug even though the server-side session
-// itself is correct. Every page includes this file before any output, so
-// it's safe to set headers here.
+// Never let the browser cache a rendered page from this app.
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
 header("Expires: 0");
@@ -20,26 +15,39 @@ define('FINE_PER_DAY', 5);       // Rs. 5 fine per day overdue
 define('LOAN_PERIOD_DAYS', 14);  // Books are issued for 14 days
 
 // ---- Auth guards ----
-// A session may hold exactly one identity at a time. If both happen to be
-// set (e.g. a leftover session from before this check existed), treat it as
-// invalid rather than silently picking one — this is what previously caused
-// a logged-in librarian to also appear logged in as a student.
 function is_admin_logged_in() {
     return isset($_SESSION['admin_id']) && !isset($_SESSION['student_id']);
 }
+
 function is_student_logged_in() {
     return isset($_SESSION['student_id']) && !isset($_SESSION['admin_id']);
 }
+
 function require_admin_login($root = '') {
     if (!is_admin_logged_in()) {
         header("Location: " . $root . "login.php");
         exit();
     }
 }
+
 function require_student_login($root = '') {
     if (!is_student_logged_in()) {
         header("Location: " . $root . "login.php");
         exit();
+    }
+    
+    // Every student must accept Terms & Conditions before using any page
+    $current_script = basename($_SERVER['SCRIPT_NAME']);
+    if ($current_script !== 'terms.php') {
+        global $conn;
+        $stmt = $conn->prepare("SELECT terms_accepted FROM students WHERE student_id = ?");
+        $stmt->bind_param("i", $_SESSION['student_id']);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        if ($row && $row['terms_accepted'] !== 'yes') {
+            header("Location: " . $root . "student/terms.php");
+            exit();
+        }
     }
 }
 
@@ -48,14 +56,16 @@ function clean($value) {
     return htmlspecialchars(trim($value ?? ''), ENT_QUOTES, 'UTF-8');
 }
 
-function calculate_fine($due_date, $return_date = null) {
-    $due = new DateTime($due_date);
-    $compareDate = $return_date ? new DateTime($return_date) : new DateTime();
-    if ($compareDate > $due) {
-        $diff = $due->diff($compareDate);
-        return $diff->days * FINE_PER_DAY;
+if (!function_exists('calculate_fine')) {
+    function calculate_fine($due_date, $return_date = null) {
+        $due = new DateTime($due_date);
+        $compareDate = $return_date ? new DateTime($return_date) : new DateTime();
+        if ($compareDate > $due) {
+            $diff = $due->diff($compareDate);
+            return $diff->days * FINE_PER_DAY;
+        }
+        return 0;
     }
-    return 0;
 }
 
 // ---- Notifications ----
@@ -70,21 +80,6 @@ function unread_notification_count($conn, $student_id) {
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
     return $stmt->get_result()->fetch_assoc()['c'];
-}
-
-
-// Helper function to calculate fine amount
-if (!function_exists('calculate_fine')) {
-    function calculate_fine($due_date) {
-        $today = new DateTime();
-        $due = new DateTime($due_date);
-        if ($today > $due) {
-            $days = $today->diff($due)->days;
-            $rate_per_day = 5; // Set your daily fine amount here
-            return $days * $rate_per_day;
-        }
-        return 0;
-    }
 }
 
 // Function to generate automated due notifications
