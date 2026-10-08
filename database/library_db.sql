@@ -1,6 +1,5 @@
 -- =========================================================
--- Digital Library Management System - Database Schema
--- Field Project (CA-310)
+-- Digital Library Management System
 -- =========================================================
 
 CREATE DATABASE IF NOT EXISTS library_management;
@@ -17,6 +16,25 @@ CREATE TABLE admin (
     email VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
+-- ---------------------------------------------------------
+-- Default librarian (admin) login — ready to use immediately,
+-- no separate setup step required.
+--
+--   Username: admin
+--   Password: admin123
+--
+-- The hash below is a genuine bcrypt hash of "admin123" — PHP's
+-- password_verify() will authenticate it correctly out of the box.
+-- Change this password after your first login. There's no
+-- Manage-Students-style edit screen for the librarian account itself,
+-- so update it directly in phpMyAdmin, or run:
+--   UPDATE admin SET password = '<new password_hash() value>' WHERE username = 'admin';
+-- ---------------------------------------------------------
+INSERT INTO admin (username, password, full_name, email) VALUES
+('admin', '$2b$12$1i7CRaMxvFjPk74ff.ftVuUNC5uIzqZH2WaQ50TKelNAgMMJ6LR3O', 'Library Administrator', 'admin@library.local');
+
 
 -- ---------------------------------------------------------
 -- Table: students (Library members)
@@ -97,18 +115,50 @@ INSERT INTO books (title, author, isbn, category_id, publisher, edition, total_c
 ('Principles of Management', 'Peter Drucker', '9780061252662', 5, 'Harper Business', '2nd', 2, 2, 'E1-04');
 
 -- ---------------------------------------------------------
--- Default librarian (admin) login — ready to use immediately,
--- no separate setup step required.
---
---   Username: admin
---   Password: admin123
---
--- The hash below is a genuine bcrypt hash of "admin123" — PHP's
--- password_verify() will authenticate it correctly out of the box.
--- Change this password after your first login. There's no
--- Manage-Students-style edit screen for the librarian account itself,
--- so update it directly in phpMyAdmin, or run:
---   UPDATE admin SET password = '<new password_hash() value>' WHERE username = 'admin';
+-- Notification
 -- ---------------------------------------------------------
-INSERT INTO admin (username, password, full_name, email) VALUES
-('admin', '$2b$12$1i7CRaMxvFjPk74ff.ftVuUNC5uIzqZH2WaQ50TKelNAgMMJ6LR3O', 'Library Administrator', 'admin@library.local');
+
+CREATE TABLE IF NOT EXISTS notifications (
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    message VARCHAR(255) NOT NULL,
+    type ENUM('issue','return_requested','return_confirmed','due_soon','overdue','membership','general') DEFAULT 'general',
+    is_read ENUM('yes','no') DEFAULT 'no',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
+);
+
+-- The 'type' list already includes issue / return_requested / return_confirmed /
+-- due_soon / overdue / membership so no schema change will be needed when we
+-- wire up the actual trigger points in the next two features.
+
+
+-- ---------------------------------------------------------
+-- Membership 
+-- --------------------------------------------------------
+
+ALTER TABLE students
+    ADD COLUMN alternate_phone      VARCHAR(15) NULL,
+    ADD COLUMN branch               VARCHAR(100) NULL,
+    ADD COLUMN roll_no              VARCHAR(50) NULL,
+    ADD COLUMN admission_year_start YEAR NULL,
+    ADD COLUMN admission_year_end   YEAR NULL,
+    ADD COLUMN membership_start_date DATE NULL,
+    ADD COLUMN membership_end_date   DATE NULL;
+
+-- Optional: give every existing student a 1-year membership starting today.
+-- Uncomment the next line if you want that instead of setting each one
+-- manually from Manage Students.
+-- UPDATE students SET membership_start_date = CURDATE(), membership_end_date = DATE_ADD(CURDATE(), INTERVAL 1 YEAR);
+
+
+-- ---------------------------------------------------------
+-- Terms Conditions 
+-- --------------------------------------------------------
+
+UPDATE students
+    SET terms_accepted = 'no';
+
+-- Defaulting to 'no' means every EXISTING student will also be asked to
+-- accept the Terms & Conditions the next time they log in, not just new
+-- registrations -- exactly as you asked for.
